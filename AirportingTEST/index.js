@@ -1,59 +1,44 @@
-import fetch from "node-fetch";
-import * as fs from "fs";
+import fetch from 'node-fetch'
+import * as fs from 'fs'
 
 class GetBankingData {
-  async init() {
-    const user = {
-      email: "john.doe@email.com",
-      password: "password123",
-      clientId: "945a08c761804ac1983536463fc4a7f6",
-      clientSecret:
-        "YqUINh5B5pYlp7UzlENutajikoDX1gIW4pNObUCn9sEXLXGm39Mm1Yq8JKUFaHUD",
-      bridgeVersion: "2021-06-01",
-    };
-    const urls = {
-      authURL: "https://api.bridgeapi.io/v2/authenticate",
-      itemsURL: "https://api.bridgeapi.io/v2/items",
-      accountsURL: "https://api.bridgeapi.io/v2/accounts",
-    };
-
-    const token = await this.fetchAccessToken(user, urls);
-    const items = await this.fetchBankItems(
-      user,
-      urls,
-      token.access_token.value
-    );
-    await this.fetchAccounts(user, urls, token.access_token.value, items);
-
-    //les 2 dernières transactions bancaires
-  }
-
-  async fetchAccessToken(
-    { email, password, clientId, clientSecret, bridgeVersion },
-    urls
-  ) {
-    const options = {
-      method: "POST",
+  async init(urls, user) {
+    const optionsPOST = {
+      method: 'POST',
       headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "Client-Id": clientId,
-        "Client-Secret": clientSecret,
-        "Bridge-Version": bridgeVersion,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'Client-Id': user.clientId,
+        'Client-Secret': user.clientSecret,
+        'Bridge-Version': user.bridgeVersion,
       },
       body: JSON.stringify({
-        email,
-        password,
+        email: user.email,
+        password: user.password,
       }),
-    };
-    const result = await fetch(urls.authURL, options)
+    }
+    const token = await this.fetchToken(urls.authURL, optionsPOST)
+    const optionsGET = {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Client-Id': user.clientId,
+        'Client-Secret': user.clientSecret,
+        'Bridge-Version': user.bridgeVersion,
+        Authorization: 'Bearer ' + token.access_token.value,
+      },
+    }
+
+    const items = await this.fetchBankItems(urls.itemsURL, optionsGET)
+    await this.fetchAccounts(urls.accountsURL, optionsGET, items)
+    await this.fetchTransactions(urls.transactionsURL, optionsGET)
+  }
+
+  async fetchToken(url, options) {
+    const result = await fetch(url, options)
       .then((res) => res.json())
       .then((res) => {
-        let {
-          access_token: value,
-          expires_at,
-          user: { uuid },
-        } = res;
+        let { access_token: value, expires_at } = res
         return {
           access_token: {
             value,
@@ -61,91 +46,123 @@ class GetBankingData {
           },
           items: [],
           transactions: [],
-        };
-      });
-    this.createJsonFile(result);
-    return result;
+        }
+      })
+      .catch((err) => console.error(err))
+    this.createJsonFile(result)
+    return result
   }
 
-  async fetchBankItems({ clientId, clientSecret, bridgeVersion }, urls, token) {
-    const options = {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "Client-Id": clientId,
-        "Client-Secret": clientSecret,
-        "Bridge-Version": bridgeVersion,
-        Authorization: "Bearer " + token,
-      },
-    };
-    const bankItems = await fetch(urls.itemsURL, options)
+  async fetchBankItems(url, options) {
+    const bankItems = await fetch(url, options)
       .then((res) => res.json())
       .then((res) => {
-        const { resources: items } = res;
-        this.addItemsJSON(items);
-        return items;
-      });
-    return bankItems.map((el) => el.id);
+        const { resources: items } = res
+        this.addToJson(items, 'items', '')
+        return items
+      })
+      .catch((err) => console.error(err))
+    return bankItems.map((el) => el.id)
   }
 
-  async fetchAccounts(
-    { clientId, clientSecret, bridgeVersion },
-    urls,
-    token,
-    items
-  ) {
-    const result = items.forEach((item) => {
-      const options = {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Client-Id": clientId,
-          "Client-Secret": clientSecret,
-          "Bridge-Version": bridgeVersion,
-          Authorization: "Bearer " + token,
-        },
-      };
-      const result = fetch(
-        urls.accountsURL + "?item_id=" + item + "&limit=null",
-        options
-      )
+  async fetchAccounts(url, options, items) {
+    let accountsData = items.forEach((item) => {
+      const result = fetch(url + '?item_id=' + item + '&limit=null', options)
         .then((res) => res.json())
         .then((res) => {
-          const { resources: accounts } = res;
-          this.addAccountsJSON(item, accounts);
-          return accounts;
-        });
-    });
-    return result;
+          const { resources: result } = res
+          let accounts = result.map((account) => {
+            const {
+              id,
+              name,
+              balance,
+              status,
+              status_code_info,
+              status_code_description,
+              updated_at,
+              type,
+              currency_code,
+              iban,
+            } = account
+            return {
+              id,
+              name,
+              balance,
+              status,
+              status_code_info,
+              status_code_description,
+              updated_at,
+              type,
+              currency_code,
+              iban,
+            }
+          })
+          this.addToJson(accounts, 'accounts', item)
+          return accounts
+        })
+        .catch((err) => console.error(err))
+      return result
+    })
+    return accountsData
+  }
+
+  async fetchTransactions(url, options) {
+    const transactionsData = await fetch(url, options)
+      .then((res) => res.json())
+      .then((res) => {
+        const { resources: transactions } = res
+        this.addToJson(transactions, 'transactions', '')
+        return transactions
+      })
+      .catch((err) => console.error(err))
+    return transactionsData
   }
 
   createJsonFile(data) {
-    fs.writeFile("data.json", JSON.stringify(data), (err) => {
-      if (err) throw err;
-      console.log("New data added");
-    });
+    fs.writeFile('data.json', JSON.stringify(data), (err) => {
+      if (err) throw err
+      console.log('New data added')
+    })
   }
 
-  addItemsJSON(newData) {
-    let retrieved = fs.readFileSync("data.json");
-    let temp = JSON.parse(retrieved);
-    temp["items"] = newData;
-    this.createJsonFile(temp);
+  retrieveJsonData() {
+    let retrieved = fs.readFileSync('data.json')
+    return JSON.parse(retrieved)
   }
 
-  addAccountsJSON(itemID, accounts) {
-    let retrieved = fs.readFileSync("data.json");
-    let temp = JSON.parse(retrieved);
-    //find the item with the right id
-    //insert the data
-    temp["items"].map((item) => {
-      if (item.id === itemID) {
-        item.accounts = accounts;
-      }
-    });
-    this.createJsonFile(temp);
+  addToJson(newData, type, itemID) {
+    let temp = this.retrieveJsonData()
+    switch (type) {
+      case 'items':
+        temp['items'] = newData
+        break
+      case 'transactions':
+        temp['transactions'] = newData
+        break
+      case 'accounts':
+        temp['items'].map((item) => {
+          if (item.id === itemID) {
+            item.accounts = newData
+          }
+        })
+        break
+    }
+    this.createJsonFile(temp)
   }
 }
 
-const bankInfoRequest = new GetBankingData();
-bankInfoRequest.init();
+const user = {
+  email: 'john.doe@email.com',
+  password: 'password123',
+  clientId: '945a08c761804ac1983536463fc4a7f6',
+  clientSecret: 'YqUINh5B5pYlp7UzlENutajikoDX1gIW4pNObUCn9sEXLXGm39Mm1Yq8JKUFaHUD',
+  bridgeVersion: '2021-06-01',
+}
+const urls = {
+  authURL: 'https://api.bridgeapi.io/v2/authenticate',
+  itemsURL: 'https://api.bridgeapi.io/v2/items',
+  accountsURL: 'https://api.bridgeapi.io/v2/accounts',
+  transactionsURL: 'https://api.bridgeapi.io/v2/transactions?limit=2',
+}
+const bankInfoRequest = new GetBankingData()
+bankInfoRequest.init(urls, user)
