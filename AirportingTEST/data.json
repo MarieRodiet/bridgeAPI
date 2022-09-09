@@ -1,0 +1,101 @@
+{
+  "access_token": {
+    "value": "c34f6696b7724373b1359bd5636f021881130ade-2dcfd550-586f-4f0f-82eb-f2d1ce14b756",
+    "expires_at": "2022-09-09T12:16:54.066Z"
+  },
+  "items": [
+    {
+      "id": 6648847,
+      "status": 0,
+      "status_code_info": null,
+      "status_code_description": null,
+      "bank_id": 408,
+      "accounts": [
+        {
+          "id": 30179394,
+          "name": "Compte Crédit Immobilier",
+          "balance": 140200,
+          "status": 0,
+          "status_code_info": null,
+          "status_code_description": null,
+          "updated_at": "2022-04-22T14:53:00.200Z",
+          "type": "loan",
+          "currency_code": "EUR",
+          "item_id": 6648847,
+          "bank_id": 408,
+          "loan_details": {
+            "next_payment_date": null,
+            "next_payment_amount": 2000,
+            "maturity_date": "2022-05-22",
+            "opening_date": "2020-04-22",
+            "interest_rate": 1.2,
+            "type": null,
+            "borrowed_capital": 500000,
+            "repaid_capital": 24000,
+            "remaining_capital": 476000,
+            "total_estimated_interests": 6441.9071367778815
+          },
+          "savings_details": null,
+          "is_pro": false,
+          "iban": null
+        },
+        {
+          "id": 30179393,
+          "name": "Compte Titres",
+          "balance": 8700,
+          "status": 0,
+          "status_code_info": null,
+          "status_code_description": null,
+          "updated_at": "2022-04-22T14:52:59.192Z",
+          "type": "brokerage",
+          "currency_code": "EUR",
+          "item_id": 6648847,
+          "bank_id": 408,
+          "loan_details": null,
+          "savings_details": null,
+          "is_pro": false,
+          "iban": null
+        },
+        {
+          "id": 30179392,
+          "name": "Compte Épargne",
+          "balance": 6900,
+          "status": 0,
+          "status_code_info": null,
+          "status_code_description": null,
+          "updated_at": "2022-04-22T14:52:58.988Z",
+          "type": "savings",
+          "currency_code": "EUR",
+          "item_id": 6648847,
+          "bank_id": 408,
+          "loan_details": null,
+          "savings_details": {
+            "opening_date": "2015-09-18",
+            "interest_rate": 0.9,
+            "ceiling": 10000
+          },
+          "is_pro": false,
+          "iban": null
+        },
+        {
+          "id": 30179391,
+          "name": "Compte Courant",
+          "balance": 1037,
+          "status": 0,
+          "status_code_info": null,
+          "status_code_description": null,
+          "updated_at": "2022-04-22T14:52:53.043Z",
+          "type": "checking",
+          "currency_code": "EUR",
+          "item_id": 6648847,
+          "bank_id": 408,
+          "loan_details": null,
+          "savings_details": null,
+          "is_pro": false,
+          "iban": "FR2517569000704129741793V21"
+        }
+      ]
+    }
+  ],
+  "transactions": []
+}
