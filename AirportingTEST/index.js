@@ -21,6 +21,7 @@ class GetBankingData {
     const optionsGET = {
       method: 'GET',
       headers: {
+        'Content-Type': 'application/json',
         Accept: 'application/json',
         'Client-Id': user.clientId,
         'Client-Secret': user.clientSecret,
@@ -29,8 +30,10 @@ class GetBankingData {
       },
     }
 
-    const items = await this.fetchBankItems(urls.itemsURL, optionsGET)
-    await this.fetchAccounts(urls.accountsURL, optionsGET, items)
+    const itemsID = await this.fetchBankItems(urls.itemsURL, optionsGET)
+    itemsID.forEach((itemID) => {
+      this.fetchAccounts(urls.accountsURL, optionsGET, itemID)
+    })
     await this.fetchTransactions(urls.transactionsURL, optionsGET)
   }
 
@@ -65,45 +68,42 @@ class GetBankingData {
     return bankItems.map((el) => el.id)
   }
 
-  async fetchAccounts(url, options, items) {
-    let accountsData = items.forEach((item) => {
-      const result = fetch(url + '?item_id=' + item + '&limit=null', options)
-        .then((res) => res.json())
-        .then((res) => {
-          const { resources: result } = res
-          let accounts = result.map((account) => {
-            const {
-              id,
-              name,
-              balance,
-              status,
-              status_code_info,
-              status_code_description,
-              updated_at,
-              type,
-              currency_code,
-              iban,
-            } = account
-            return {
-              id,
-              name,
-              balance,
-              status,
-              status_code_info,
-              status_code_description,
-              updated_at,
-              type,
-              currency_code,
-              iban,
-            }
-          })
-          this.addToJson(accounts, 'accounts', item)
-          return accounts
+  async fetchAccounts(url, options, itemID) {
+    const result = await fetch(url + '?item_id=' + itemID + '&limit=null', options)
+      .then((res) => res.json())
+      .then((res) => {
+        const { resources: result } = res
+        let accounts = result.map((account) => {
+          const {
+            id,
+            name,
+            balance,
+            status,
+            status_code_info,
+            status_code_description,
+            updated_at,
+            type,
+            currency_code,
+            iban,
+          } = account
+          return {
+            id,
+            name,
+            balance,
+            status,
+            status_code_info,
+            status_code_description,
+            updated_at,
+            type,
+            currency_code,
+            iban,
+          }
         })
-        .catch((err) => console.error(err))
-      return result
-    })
-    return accountsData
+        return accounts
+      })
+      .catch((err) => console.error(err))
+    this.addToJson(result, 'accounts', itemID)
+    return result
   }
 
   async fetchTransactions(url, options) {
@@ -111,10 +111,10 @@ class GetBankingData {
       .then((res) => res.json())
       .then((res) => {
         const { resources: transactions } = res
-        this.addToJson(transactions, 'transactions', '')
         return transactions
       })
       .catch((err) => console.error(err))
+    this.addToJson(transactionsData, 'transactions', '')
     return transactionsData
   }
 
@@ -126,18 +126,22 @@ class GetBankingData {
   }
 
   retrieveJsonData() {
-    let retrieved = fs.readFileSync('data.json')
-    return JSON.parse(retrieved)
+    try {
+      let retrieved = fs.readFileSync('data.json')
+      return JSON.parse(retrieved)
+    } catch (err) {
+      console.log('error', err)
+    }
   }
 
-  addToJson(newData, type, itemID) {
-    let temp = this.retrieveJsonData()
+  async addToJson(newData, type, itemID) {
+    let temp = await this.retrieveJsonData()
     switch (type) {
       case 'items':
-        temp['items'] = newData
+        temp.items = newData
         break
       case 'transactions':
-        temp['transactions'] = newData
+        temp['transactions'] = Array.from(newData)
         break
       case 'accounts':
         temp['items'].map((item) => {
